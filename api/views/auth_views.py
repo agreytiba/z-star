@@ -31,17 +31,16 @@ class SendOTPView(APIView):
         OTP.objects.create(email=email, phone_number=phone_number, otp_code=otp_code)
         
         email_sent = False
-        sms_sent = False
         
         # 1. Send Verification Code via Email
         if settings.EMAIL_HOST_USER:
             try:
-                subject = 'Your Zuri Star Verification Code'
-                message = f'Your verification code for Zuri Star is: {otp_code}\n\nThis code will expire in 30 minutes.'
+                subject = 'Your Zuristar Verification Code'
+                message = f'Your verification code for Zuristar is: {otp_code}\n\nThis code will expire in 30 minutes.'
                 html_message = f"""
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #EAB308; margin: 0;">Zuri Star</h1>
+                        <h1 style="color: #EAB308; margin: 0;">Zuristar</h1>
                         <p style="color: #666; margin: 5px 0 0 0;">Beauty at your fingertips</p>
                     </div>
                     <div style="background-color: #f9f9f9; padding: 30px; border-radius: 8px; text-align: center;">
@@ -53,7 +52,7 @@ class SendOTPView(APIView):
                         <p style="color: #999; font-size: 12px; margin-top: 25px;">This code will expire in 30 minutes. If you didn't request this code, please ignore this email.</p>
                     </div>
                     <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #999;">
-                        &copy; 2026 Zuri Star. All rights reserved.
+                        &copy; 2026 Zuristar. All rights reserved.
                     </div>
                 </div>
                 """
@@ -79,41 +78,26 @@ class SendOTPView(APIView):
             except Exception as e:
                 print(f"Email Send Error: {e}")
 
-        # 2. Send Verification Code via SMS (Notify Africa)
-        if phone_number and settings.NOTIFY_AFRICA_API_TOKEN:
-            try:
-                sms_message = f"Your Zuri Star verification code is: {otp_code}. Valid for 30 mins."
-                payload = {
-                    "to": phone_number,
-                    "message": sms_message,
-                    "sender_id": settings.NOTIFY_AFRICA_SENDER_ID,
-                    "api_token": settings.NOTIFY_AFRICA_API_TOKEN
-                }
-                response = requests.post(settings.NOTIFY_AFRICA_BASE_URL, json=payload, timeout=10)
-                if response.status_code in [200, 201]:
-                    sms_sent = True
-                else:
-                    print(f"SMS Send Error (Status {response.status_code}): {response.text}")
-            except Exception as e:
-                print(f"SMS Exception: {e}")
-
         # Final Response
-        if email_sent or sms_sent:
+        if email_sent:
             return Response({
                 'message': 'Verification code sent successfully',
                 'email_sent': email_sent,
-                'sms_sent': sms_sent,
+                'sms_sent': False,
                 'otp_sent': True
             })
         else:
+            # OTP is still saved to DB even if email failed.
+            # Return 200 so the app can proceed — in debug mode expose the code
+            # so the developer can manually verify. Never do this in production.
             return Response({
-                'message': 'Failed to send verification code. Please check your contact details.',
+                'message': 'Verification code created. Email delivery may be delayed.',
                 'email_sent': False,
                 'sms_sent': False,
-                'otp_sent': False,
-                'code': otp_code if settings.DEBUG else None, # Only show code in debug mode if sending fails
-                'hint': "Check your .env SMTP or Notify Africa configurations"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                'otp_sent': True,  # OTP record exists — let the user verify
+                'code': otp_code if settings.DEBUG else None,
+                'hint': "Check your .env SMTP configuration"
+            }, status=status.HTTP_200_OK)
 
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -226,3 +210,4 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+

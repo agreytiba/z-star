@@ -36,7 +36,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # Notify Africa SMS Settings
 NOTIFY_AFRICA_API_TOKEN = os.getenv('NOTIFY_AFRICA_API_TOKEN', 'YOUR_ACTUAL_TOKEN_HERE')
-NOTIFY_AFRICA_SENDER_ID = os.getenv('NOTIFY_AFRICA_SENDER_ID', 'ZuriStar')
+NOTIFY_AFRICA_SENDER_ID = os.getenv('NOTIFY_AFRICA_SENDER_ID', 'Zuristar')
 NOTIFY_AFRICA_BASE_URL = os.getenv('NOTIFY_AFRICA_BASE_URL', 'https://api.notify.africa/v1/send')
 
 # Email Settings
@@ -47,7 +47,7 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f"Zuri Star <{EMAIL_HOST_USER}>")
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f"Zuristar <{EMAIL_HOST_USER}>")
 
 
 # Application definition
@@ -169,3 +169,4 @@ CORS_ALLOW_ALL_ORIGINS = True # For development
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000').split(',')
+

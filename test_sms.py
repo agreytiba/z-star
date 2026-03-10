@@ -19,7 +19,7 @@ print(f"Token: {api_token}")
 
 payload = {
     "to": phone,
-    "message": "Zuri Star test SMS",
+    "message": "Zuristar test SMS",
     "sender_id": sender_id,
     "api_token": api_token
 }
@@ -30,3 +30,4 @@ try:
     print(f"Response Body: {response.text}")
 except Exception as e:
     print(f"Request Error: {e}")
+

@@ -135,21 +135,31 @@ class BookingSerializer(serializers.ModelSerializer):
     def get_staff_name(self, obj):
         return obj.staff.profile.full_name if obj.staff else None
 
+    def to_internal_value(self, data):
+        # Support both 'salon' and 'salon_id' in input
+        if 'salon' in data and 'salon_id' not in data:
+            data['salon_id'] = data.get('salon')
+        if 'staff' in data and 'staff_id' not in data:
+            data['staff_id'] = data.get('staff')
+        return super().to_internal_value(data)
+
 class SalonStaffSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source='profile.full_name', required=False)
-    email_invite = serializers.EmailField(source='profile.user.email', required=False)
+    name = serializers.SerializerMethodField()
+    email_invite = serializers.SerializerMethodField()
     avatar_url = serializers.CharField(source='profile.avatar_url', read_only=True)
     
     class Meta:
         model = SalonStaff
         fields = ['id', 'salon', 'name', 'email_invite', 'avatar_url', 'role', 'skills', 'schedule', 'commission_rate', 'is_active', 'created_at']
+        extra_kwargs = {
+            'salon': {'required': False} # handle salon assignment manually
+        }
 
-    def to_internal_value(self, data):
-        # We handle profile creation in the ViewSet's perform_create, 
-        # but we need to allow name/email_invite in the input data
-        # even if they aren't fields on the model.
-        # We can just let them pass through to validated_data.
-        return super().to_internal_value(data)
+    def get_name(self, obj):
+        return obj.profile.full_name if obj.profile_id else None
+
+    def get_email_invite(self, obj):
+        return obj.profile.user.email if obj.profile_id and hasattr(obj.profile, 'user') else None
 
 class LoyaltyPointsSerializer(serializers.ModelSerializer):
     class Meta:
