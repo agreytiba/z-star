@@ -9,15 +9,20 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username']
 
 class OTP(models.Model):
-    email = models.EmailField(null=True, blank=True)
+    email = models.EmailField(null=True, blank=True, db_index=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     otp_code = models.CharField(max_length=6, null=True, blank=True)
     pin_id = models.CharField(max_length=100, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     is_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.email or self.phone_number} - {self.otp_code}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['email', 'is_verified', 'created_at']),
+        ]
 
 class Profile(models.Model):
     ROLE_CHOICES = [
@@ -42,6 +47,12 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.full_name or self.user.email
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['role']),
+            models.Index(fields=['role', 'created_at']),
+        ]
 
 class Salon(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -68,6 +79,13 @@ class Salon(models.Model):
     gender_specific = models.CharField(max_length=20, default='unisex')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['owner']),
+            models.Index(fields=['is_active', 'rating']),
+            models.Index(fields=['is_active', 'is_verified']),
+        ]
 
 class SalonService(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -126,6 +144,14 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['salon', 'booking_date']),
+            models.Index(fields=['salon', 'status']),
+            models.Index(fields=['booking_date']),
+        ]
+
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     salon = models.ForeignKey(Salon, on_delete=models.CASCADE, related_name='products')
@@ -165,6 +191,7 @@ class Review(models.Model):
     rating = models.IntegerField()
     comment = models.TextField(null=True, blank=True)
     owner_response = models.TextField(null=True, blank=True)
+    staff_response = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class SalonGallery(models.Model):
@@ -185,6 +212,12 @@ class Notification(models.Model):
     related_id = models.UUIDField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['user', 'created_at']),
+        ]
 
 class LoyaltyPoints(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='loyalty_info')
@@ -210,3 +243,38 @@ class FCMToken(models.Model):
 
     class Meta:
         unique_together = ('user', 'token')
+
+
+class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    commission = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    max_staff = models.IntegerField(default=5)
+    features = models.JSONField(default=list)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class SystemSetting(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    value = models.TextField(default='false')
+    label = models.CharField(max_length=255, default='')
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.key
+
+
+class DisputeMessage(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='dispute_messages', null=True, blank=True)
+    sender_role = models.CharField(max_length=50, default='admin')  # admin, customer, salon
+    message = models.TextField()
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Dispute on Booking {self.booking_id} - {self.sender_role}"

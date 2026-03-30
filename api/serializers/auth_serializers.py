@@ -198,19 +198,24 @@ class StaffLedgerSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ReviewSerializer(serializers.ModelSerializer):
-    profile = serializers.SerializerMethodField()
+    reviewer_name = serializers.CharField(source='reviewer.profile.full_name', read_only=True)
+    reviewer_avatar = serializers.CharField(source='reviewer.profile.avatar_url', read_only=True)
     
     class Meta:
         model = Review
-        fields = ['id', 'booking', 'salon', 'reviewer', 'rating', 'comment', 'owner_response', 'created_at', 'profile']
+        fields = [
+            'id', 'booking', 'salon', 'reviewer', 'reviewer_name', 
+            'reviewer_avatar', 'rating', 'comment', 'owner_response', 
+            'staff_response', 'created_at'
+        ]
+        read_only_fields = ['id', 'reviewer', 'reviewer_name', 'reviewer_avatar', 'created_at']
 
-    def get_profile(self, obj):
-        if not hasattr(obj.reviewer, 'profile'):
-            return {'full_name': obj.reviewer.username, 'avatar_url': None}
-        return {
-            'full_name': obj.reviewer.profile.full_name,
-            'avatar_url': obj.reviewer.profile.avatar_url,
-        }
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Ensure reviewer_name fallback if no profile exists
+        if not representation.get('reviewer_name'):
+            representation['reviewer_name'] = instance.reviewer.username
+        return representation
 
 class SalonGallerySerializer(serializers.ModelSerializer):
     class Meta:
